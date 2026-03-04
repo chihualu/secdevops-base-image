@@ -8,11 +8,7 @@ on:
   schedule:
     # 每月 1 日凌晨 2:00 UTC 重建（更新 base packages）
     - cron: '0 2 1 * *'
-  workflow_dispatch:  # 允許手動觸發
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  workflow_dispatch:
 
 jobs:
   build-push:
@@ -23,30 +19,27 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        run: |
+          git clone "https://github.com/${{ github.repository }}.git" .
+          git checkout "${{ github.sha }}"
 
       - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | \
+            docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-
+      - name: Build image
+        run: |
+          IMAGE="ghcr.io/${{ github.repository_owner }}/secdevops-base-image"
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          docker build \
+            -t "${IMAGE}:latest" \
+            -t "${IMAGE}:sha-${SHORT_SHA}" \
+            .
+          echo "IMAGE=${IMAGE}" >> $GITHUB_ENV
+          echo "SHORT_SHA=${SHORT_SHA}" >> $GITHUB_ENV
 
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-to: type=inline
+      - name: Push image
+        run: |
+          docker push "${IMAGE}:latest"
+          docker push "${IMAGE}:sha-${SHORT_SHA}"
