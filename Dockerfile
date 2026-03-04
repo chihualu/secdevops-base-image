@@ -68,7 +68,7 @@ RUN wget -qO /usr/local/bin/osv-scanner \
 # OWASP Dependency-Check（黑箱掃描）
 ARG DC_VERSION=12.2.0
 RUN wget -qO /tmp/dependency-check.zip \
-      "https://github.com/jeremylong/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" && \
+      "https://github.com/dependency-check/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" && \
     unzip -q /tmp/dependency-check.zip -d /opt && \
     ln -s /opt/dependency-check/bin/dependency-check.sh /usr/local/bin/dependency-check && \
     rm /tmp/dependency-check.zip
@@ -85,3 +85,4 @@ RUN git config --global --add safe.directory '*'
 # ─── switch-java helper（供 pipeline script 使用）─────────
 COPY switch-java.sh /usr/local/bin/switch-java.sh
 RUN chmod +x /usr/local/bin/switch-java.sh
+
