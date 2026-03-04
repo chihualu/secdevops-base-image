@@ -43,6 +43,11 @@ ENV MAVEN_HOME=/opt/maven
 ENV JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
+# ─── 安全掃描快取目錄（Runner 可 volume mount 覆蓋）────────
+ENV TRIVY_CACHE_DIR=/cache/trivy
+ENV DC_DATA_DIR=/cache/owasp-dc
+RUN mkdir -p /cache/trivy /cache/owasp-dc
+
 # ─── 安全掃描工具 ─────────────────────────────────────────
 # Trivy（黑箱掃描）
 RUN wget -qO /tmp/trivy.deb \
@@ -70,8 +75,11 @@ ARG DC_VERSION=12.2.0
 RUN wget -qO /tmp/dependency-check.zip \
       "https://github.com/dependency-check/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" && \
     unzip -q /tmp/dependency-check.zip -d /opt && \
-    ln -s /opt/dependency-check/bin/dependency-check.sh /usr/local/bin/dependency-check && \
     rm /tmp/dependency-check.zip
+# wrapper：確保執行時 JAVA_HOME 已設定
+RUN printf '#!/bin/sh\nexec /opt/dependency-check/bin/dependency-check.sh "$@"\n' \
+      > /usr/local/bin/dependency-check && \
+    chmod +x /usr/local/bin/dependency-check
 
 # ─── pip 工具 ────────────────────────────────────────────
 RUN pip3 install --no-cache-dir \
@@ -85,4 +93,3 @@ RUN git config --global --add safe.directory '*'
 # ─── switch-java helper（供 pipeline script 使用）─────────
 COPY switch-java.sh /usr/local/bin/switch-java.sh
 RUN chmod +x /usr/local/bin/switch-java.sh
-
