@@ -43,6 +43,36 @@ ENV MAVEN_HOME=/opt/maven
 ENV JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
+# ─── 安全掃描工具 ─────────────────────────────────────────
+# Trivy（黑箱掃描）
+RUN wget -qO /tmp/trivy.deb \
+      "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.deb" && \
+    dpkg -i /tmp/trivy.deb && rm /tmp/trivy.deb
+
+# Gitleaks（Secret 掃描）
+ARG GITLEAKS_VERSION=8.30.0
+RUN wget -qO /tmp/gitleaks.tar.gz \
+      "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" && \
+    tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks && \
+    rm /tmp/gitleaks.tar.gz
+
+# Semgrep（白箱補充掃描）
+RUN pip3 install --no-cache-dir semgrep==1.153.1
+
+# OSV-Scanner（黑箱掃描）
+ARG OSV_VERSION=2.3.3
+RUN wget -qO /usr/local/bin/osv-scanner \
+      "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64" && \
+    chmod +x /usr/local/bin/osv-scanner
+
+# OWASP Dependency-Check（黑箱掃描）
+ARG DC_VERSION=12.2.0
+RUN wget -qO /tmp/dependency-check.zip \
+      "https://github.com/jeremylong/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" && \
+    unzip -q /tmp/dependency-check.zip -d /opt && \
+    ln -s /opt/dependency-check/bin/dependency-check.sh /usr/local/bin/dependency-check && \
+    rm /tmp/dependency-check.zip
+
 # ─── pip 工具 ────────────────────────────────────────────
 RUN pip3 install --no-cache-dir \
     psycopg2-binary \
